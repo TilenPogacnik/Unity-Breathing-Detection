@@ -22,9 +22,13 @@ public class FFTAnalysis : MonoBehaviour {
 	void analyzeSpectrumData(float[] fftSpectrum){
 		//Calculate sum of smoothed FFT data
 		fftSum = 0.0f;
+
+
 		foreach (float f in fftSpectrum) {
 			fftSum += f;
 		}
+
+
 		//Debug.Log ("FFTSum: " + fftSum);
 		if (fftSum > fftSumThreshold) {
 			exhalePossible = true;

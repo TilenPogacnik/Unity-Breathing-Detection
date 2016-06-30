@@ -1,11 +1,13 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
+using System.Collections.Generic;
 
 [RequireComponent(typeof (MicrophoneController))]
 public class NewBreathingDetection : MonoBehaviour {
 
 	public Text stateText;
+	public Text varianceText;
 
 
 	enum Breathing{Inhale, Exhale}; //Two possible breathing states 
@@ -33,6 +35,10 @@ public class NewBreathingDetection : MonoBehaviour {
 
 	public LineRenderer lRend; 
 
+	//test variables
+	private List<float> loudnessList = new List<float>();
+	private int maxListCount = 10;
+	public float minimizedLoudness = 999f;
 
 
 	void Start () {
@@ -45,11 +51,13 @@ public class NewBreathingDetection : MonoBehaviour {
 		if (fftAnalysis == null) {
 			Debug.LogError("Cannot find FFTAnalysis attached to this object.");
 		}
+
 	}
 	
 	void Update () {
-		Debug.Log ("Loudness " + micControl.loudness);
 		updateVariance ();
+
+		minimizeLoudness ();
 
 		switch (currentState) {
 			
@@ -82,13 +90,13 @@ public class NewBreathingDetection : MonoBehaviour {
 	void checkIfExhaling(){
 		
 		if (currentState == Breathing.Inhale) {
-			if (micControl.loudness > exhaleLoudnessThresholdLow && variance > exhaleVarianceThreshold
+			if (minimizedLoudness > exhaleLoudnessThresholdLow && variance > exhaleVarianceThreshold
 			    && (fftAnalysis == null || fftAnalysis.GetExhalePossible())) {
 				fastExhalePossible = true;
 			}
 			
 			if ( fastExhalePossible || 
-			    (micControl.loudness > exhaleLoudnessThresholdHigh && varianceUnderThresholdCounter > 8) //ALI moč precej velika && zadnjihnekaj varianc pod thresholdom
+			    (minimizedLoudness > exhaleLoudnessThresholdHigh && varianceUnderThresholdCounter > 8) //ALI moč precej velika && zadnjihnekaj varianc pod thresholdom
 			    && (fftAnalysis == null || fftAnalysis.GetExhalePossible())) { 
 				varianceUnderThresholdCounter = 0;
 				fastExhalePossible = false; 
@@ -115,7 +123,7 @@ public class NewBreathingDetection : MonoBehaviour {
 		//Moč pod  exhale thresholdom && varianca < inhale threshold
 		//ALI loudness občutno pod thresholdom
 		if (currentState == Breathing.Exhale &&
-		    ((micControl.loudness < inhaleLoudnessThresholdHigh && variance < inhaleVarianceThreshold) || micControl.loudness < inhaleLoudnessThresholdLow)
+		    ((minimizedLoudness < inhaleLoudnessThresholdHigh && variance < inhaleVarianceThreshold) || minimizedLoudness < inhaleLoudnessThresholdLow)
 		    && (fftAnalysis == null || !fftAnalysis.GetExhalePossible())) {
 			
 			currentState = Breathing.Inhale; //Change state to inhaling			
@@ -127,7 +135,8 @@ public class NewBreathingDetection : MonoBehaviour {
 	void updateVariance(){
 		variance = micControl.loudness - prevLoudness;
 		prevLoudness = micControl.loudness;
-		
+
+		varianceText.text = ("Variance: " + Mathf.Round (variance*100.0f)/100.0f);
 		
 		//update variance counter
 		if (variance < exhaleVarianceThreshold) {
@@ -136,5 +145,38 @@ public class NewBreathingDetection : MonoBehaviour {
 		} else {
 			varianceUnderThresholdCounter = 0;
 		}
+	}
+
+	void minimizeLoudness(){
+		loudnessList.Add (prevLoudness);
+
+		if (prevLoudness <= minimizedLoudness) {
+			minimizedLoudness = prevLoudness;
+		}
+
+		//Remove oldest loudness from list and recalculate minimizedLoudness (only if the oldest loudness is the currentMinimizedLoudness)
+		if (loudnessList.Count >= maxListCount) {
+			if (loudnessList[0] <= minimizedLoudness){
+				//Find new minimizedLoudness
+				float min = loudnessList[1];
+				for(int i = 1; i < loudnessList.Count; i++){
+					if (loudnessList[i] < min){
+						min =loudnessList[i];
+					}
+				}
+				minimizedLoudness = min;
+
+			}
+			loudnessList.RemoveAt(0);
+
+		} 
+
+		/*string dLog = "";
+		for (int i = 0; i < loudnessList.Count; i++) {
+			dLog += loudnessList[i] + ", ";
+		}
+		Debug.Log (dLog);
+		Debug.Log("MinimizedLoudness: " + minimizedLoudness + " Past loudness: " + prevLoudness);
+		*/
 	}
 }

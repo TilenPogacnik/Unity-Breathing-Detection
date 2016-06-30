@@ -20,6 +20,7 @@ public class TestGraphMovement : MonoBehaviour {
 	private float varianceBuffer = 0f;
 
 	public MicrophoneController micControl;
+	public NewBreathingDetection bDetection;
 
 	public Text loudnessText;
 
@@ -50,7 +51,7 @@ public class TestGraphMovement : MonoBehaviour {
 
 		switch (gType) {
 			case (GraphType.Loudness):
-				this.transform.position = new Vector3 (this.transform.position.x + xSpeed * Time.deltaTime, minY + (maxY - minY) * micControl.loudness, this.transform.position.z);
+				this.transform.position = new Vector3 (this.transform.position.x + xSpeed * Time.deltaTime, minY + (maxY - minY) * bDetection.minimizedLoudness, this.transform.position.z);
 
 				if (this.transform.position.x >= maxX) {
 					this.transform.position = new Vector3(minX, this.transform.position.y, this.transform.position.z);

@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.Audio;
 
 
 [RequireComponent (typeof (AudioSource))]
@@ -7,18 +8,28 @@ public class MicrophoneController : MonoBehaviour {
 
 	private AudioSource aSource;
 	public int samples = 1024;
-	public int frequency = 44100;
+	private int maxFrequency = 44100;
+	private int minFrequency = 0;
 	public bool mute = true; //delete and implement audio mixer
 	public float loudness;
 	private float loudnessMultiplier = 10.0f; //Multiply loudness with this number
 
 	private float[] fftSpectrum;
+	public bool useFFT = false;
 
 	private bool isMicrophoneReady = false;
+	private AudioMixer aMixer;
 
 	IEnumerator Start () {
 		aSource = this.GetComponent<AudioSource> ();
 
+		aMixer = Resources.Load ("MicrophoneMixer") as AudioMixer;		
+		if(mute){
+			aMixer.SetFloat("MicrophoneVolume",-80);
+		}
+		else{
+			aMixer.SetFloat("MicrophoneVolume",0);
+		}
 
 		if (Microphone.devices.Length == 0) {
 			Debug.LogWarning("No microphone detected.");
@@ -42,15 +53,21 @@ public class MicrophoneController : MonoBehaviour {
 	void Update () {
 		if (isMicrophoneReady) {
 			loudness = calculateLoudness();
-			calculateSpectrumData();
+			if (useFFT){
+				calculateSpectrumData();
+			}
 		}
 	}
 
 	void prepareMicrophone(){
+		Debug.Log ("Output sample rate: " + AudioSettings.outputSampleRate);
 		if (Microphone.devices.Length > 0){
-			aSource.clip = Microphone.Start(Microphone.devices[0], true, 1, frequency);
+			Microphone.GetDeviceCaps(Microphone.devices[0], out minFrequency, out maxFrequency);//Gets the maxFrequency and minFrequency of the device
+			if (maxFrequency == 0){//These 2 lines of code are mainly for windows computers
+				maxFrequency = 44100;
+			}
+			aSource.clip = Microphone.Start(Microphone.devices[0], true, 1, AudioSettings.outputSampleRate);
 			aSource.loop = true;
-			aSource.mute = mute;
 
 			//Wait until microphone starts
 			while (!(Microphone.GetPosition(Microphone.devices[0]) > 0)){
@@ -73,10 +90,10 @@ public class MicrophoneController : MonoBehaviour {
 
 		aSource.GetOutputData (microphoneData, 0);
 		for (int i = 0; i < microphoneData.Length; i++) {
-			sum += Mathf.Abs(microphoneData[i]);
+			sum += Mathf.Pow(microphoneData[i],2);//Mathf.Abs(microphoneData[i]);
 		}
 
-		return sum/samples*loudnessMultiplier;
+		return Mathf.Sqrt(sum/samples)*loudnessMultiplier;
 	}
 
 	void calculateSpectrumData(){
