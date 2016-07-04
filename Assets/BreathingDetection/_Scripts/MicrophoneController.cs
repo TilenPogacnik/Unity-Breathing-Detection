@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System.Collections;
 using UnityEngine.Audio;
+using System.Collections.Generic;
+
 
 
 [RequireComponent (typeof (AudioSource))]
@@ -19,6 +21,12 @@ public class MicrophoneController : MonoBehaviour {
 
 	private bool isMicrophoneReady = false;
 	private AudioMixer aMixer;
+
+	public float highPassCutoff; //Ignores all frequencies above this value
+	private float pitchValue;
+	private List<float> pastPitches;
+	public int pitchRecordTime = 5;
+	private float averagePitch;
 
 	IEnumerator Start () {
 		aSource = this.GetComponent<AudioSource> ();
@@ -47,12 +55,16 @@ public class MicrophoneController : MonoBehaviour {
 		}
 
 		prepareMicrophone ();
+
+		fftSpectrum = new float[samples];
+		pastPitches = new List<float> ();
 	}
 	
 	// Update is called once per frame
 	void Update () {
 		if (isMicrophoneReady) {
 			loudness = calculateLoudness();
+			calculatePitch();
 			if (useFFT){
 				calculateSpectrumData();
 			}
@@ -82,6 +94,60 @@ public class MicrophoneController : MonoBehaviour {
 				Debug.LogWarning("No microphone detected.");
 		}
 
+	}
+
+	void calculatePitch(){
+		// Gets the sound spectrum.
+		aSource.GetSpectrumData(fftSpectrum, 0, FFTWindow.BlackmanHarris);
+		float maxV = 0;
+		int maxN = 0;
+		
+		// Find the highest sample.
+		for (int i = 0; i < fftSpectrum.Length; i++){
+			if (fftSpectrum[i] > maxV){
+				maxV = fftSpectrum[i];
+				maxN = i; // maxN is the index of max
+			}
+		}
+		
+		// Pass the index to a float variable
+		float freqN = maxN;
+		
+		// Convert index to frequency
+		pitchValue = HighPassFilter(freqN * 24000 / samples, highPassCutoff);
+		updatePastPitches (pitchValue);
+		//if (pitchValue > 100)	Debug.Log (pitchValue);
+	}
+
+	float HighPassFilter(float pitch, float cutOff){
+		if (pitch > cutOff) {
+			return 0;
+		} else {
+			return pitch;
+		}
+	}
+
+	void updatePastPitches(float newPitch){
+		pastPitches.Add(newPitch);
+
+		if (pastPitches.Count > pitchRecordTime) {
+			pastPitches.RemoveAt(0);
+		}
+
+		averagePitch = 0;
+		foreach (float num in pastPitches) {
+			averagePitch += num;
+		}
+		averagePitch /= pastPitches.Count;
+		Debug.Log ("Average pitch: " + averagePitch);
+	}
+
+	public float getPitch(){
+		return pitchValue;
+	}
+
+	public float getAveragePitch(){
+		return averagePitch;
 	}
 
 	float calculateLoudness(){

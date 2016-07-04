@@ -31,6 +31,10 @@ public class NewBreathingDetection : MonoBehaviour {
 	public float exhaleVarianceThreshold = 2; //determines how large should the variance be to change state to Exhale
 	public float inhaleVarianceThreshold = -3; //determines how silent should the variance be to change state to Inhale
 
+	public float pitchFrequencyThresholdLow = 1000;	//if sound pitch is between these values it could be an exhale
+	public float pitchFrequencyThresholdHigh = 2000;
+
+
 	private FFTAnalysis fftAnalysis;
 
 	public LineRenderer lRend; 
@@ -90,21 +94,15 @@ public class NewBreathingDetection : MonoBehaviour {
 	void checkIfExhaling(){
 		
 		if (currentState == Breathing.Inhale) {
-			if (minimizedLoudness > exhaleLoudnessThresholdLow && variance > exhaleVarianceThreshold
-			    && (fftAnalysis == null || fftAnalysis.GetExhalePossible())) {
+			if (minimizedLoudness > exhaleLoudnessThresholdLow
+			    &&(micControl.getPitch() > pitchFrequencyThresholdLow && micControl.getPitch() < pitchFrequencyThresholdHigh)) {
 				fastExhalePossible = true;
-			}
-			
-			if ( fastExhalePossible || 
-			    (minimizedLoudness > exhaleLoudnessThresholdHigh && varianceUnderThresholdCounter > 8) //ALI moč precej velika && zadnjihnekaj varianc pod thresholdom
-			    && (fftAnalysis == null || fftAnalysis.GetExhalePossible())) { 
-				varianceUnderThresholdCounter = 0;
-				fastExhalePossible = false; 
-				
+
 				currentState = Breathing.Exhale; //Change state to exhaling
 				BreathingEvents.TriggerOnExhale (); //Trigger onExhale event
-			} 
+			}
 			
+
 		}
 	}
 	
@@ -123,8 +121,7 @@ public class NewBreathingDetection : MonoBehaviour {
 		//Moč pod  exhale thresholdom && varianca < inhale threshold
 		//ALI loudness občutno pod thresholdom
 		if (currentState == Breathing.Exhale &&
-		    ((minimizedLoudness < inhaleLoudnessThresholdHigh && variance < inhaleVarianceThreshold) || minimizedLoudness < inhaleLoudnessThresholdLow)
-		    && (fftAnalysis == null || !fftAnalysis.GetExhalePossible())) {
+		    ((minimizedLoudness < inhaleLoudnessThresholdHigh && variance < inhaleVarianceThreshold) || minimizedLoudness < inhaleLoudnessThresholdLow)) {
 			
 			currentState = Breathing.Inhale; //Change state to inhaling			
 			BreathingEvents.TriggerOnInhale(); //Trigger onInhale event			

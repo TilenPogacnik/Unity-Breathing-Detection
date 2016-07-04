@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class TestGraphMovement : MonoBehaviour {
 
-	public enum GraphType{Loudness, Variance, FFTSum};
+	public enum GraphType{Loudness, Variance, FFTSum, TrueLoudness, Pitch};
 
 	public GraphType gType;
 
@@ -74,6 +74,21 @@ public class TestGraphMovement : MonoBehaviour {
 			}
 			break;
 
+			case (GraphType.TrueLoudness):
+			this.transform.position = new Vector3 (this.transform.position.x + xSpeed * Time.deltaTime, minY + (maxY - minY) * micControl.loudness, this.transform.position.z);
+			
+			if (this.transform.position.x >= maxX) {
+				this.transform.position = new Vector3(minX, this.transform.position.y, this.transform.position.z);
+			}
+			break;
+
+		case (GraphType.Pitch):
+			this.transform.position = new Vector3 (this.transform.position.x + xSpeed * Time.deltaTime, minY + (maxY - minY) * micControl.getAveragePitch(), this.transform.position.z);
+			
+			if (this.transform.position.x >= maxX) {
+				this.transform.position = new Vector3(minX, this.transform.position.y, this.transform.position.z);
+			}
+			break;
 
 			default:
 				Debug.Log ("This shouldn't happen");
