@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 
 [RequireComponent(typeof (MicrophoneController))]
-public class NewBreathingDetection : MonoBehaviour {
+public class BreathingDetection : MonoBehaviour {
 
 	public Text stateText;
 	public Text varianceText;
@@ -35,10 +35,6 @@ public class NewBreathingDetection : MonoBehaviour {
 	public float pitchFrequencyThresholdHigh = 2000;
 
 
-	private FFTAnalysis fftAnalysis;
-
-	public LineRenderer lRend; 
-
 	//test variables
 	private List<float> loudnessList = new List<float>();
 	private int maxListCount = 10;
@@ -50,12 +46,6 @@ public class NewBreathingDetection : MonoBehaviour {
 		if (micControl == null) {
 			Debug.LogError("Cannot find MicrophoneController attached to this object.");
 		}
-
-		fftAnalysis = this.GetComponent<FFTAnalysis> ();
-		if (fftAnalysis == null) {
-			Debug.LogError("Cannot find FFTAnalysis attached to this object.");
-		}
-
 	}
 	
 	void Update () {
@@ -133,8 +123,6 @@ public class NewBreathingDetection : MonoBehaviour {
 		variance = micControl.loudness - prevLoudness;
 		prevLoudness = micControl.loudness;
 
-		varianceText.text = ("Variance: " + Mathf.Round (variance*100.0f)/100.0f);
-		
 		//update variance counter
 		if (variance < exhaleVarianceThreshold) {
 			varianceUnderThresholdCounter++;

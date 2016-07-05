@@ -72,7 +72,7 @@ public class MicrophoneController : MonoBehaviour {
 	}
 
 	void prepareMicrophone(){
-		Debug.Log ("Output sample rate: " + AudioSettings.outputSampleRate);
+		//Debug.Log ("Output sample rate: " + AudioSettings.outputSampleRate);
 		if (Microphone.devices.Length > 0){
 			Microphone.GetDeviceCaps(Microphone.devices[0], out minFrequency, out maxFrequency);//Gets the maxFrequency and minFrequency of the device
 			if (maxFrequency == 0){//These 2 lines of code are mainly for windows computers
@@ -139,7 +139,7 @@ public class MicrophoneController : MonoBehaviour {
 			averagePitch += num;
 		}
 		averagePitch /= pastPitches.Count;
-		Debug.Log ("Average pitch: " + averagePitch);
+		//Debug.Log ("Average pitch: " + averagePitch);
 	}
 
 	public float getPitch(){

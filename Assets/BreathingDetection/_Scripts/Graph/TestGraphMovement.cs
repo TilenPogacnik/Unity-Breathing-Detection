@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 public class TestGraphMovement : MonoBehaviour {
 
-	public enum GraphType{Loudness, Variance, FFTSum, TrueLoudness, Pitch};
+	public enum GraphType{Loudness, Variance, TrueLoudness, Pitch};
 
 	public GraphType gType;
 
@@ -20,12 +20,9 @@ public class TestGraphMovement : MonoBehaviour {
 	private float varianceBuffer = 0f;
 
 	public MicrophoneController micControl;
-	public NewBreathingDetection bDetection;
+	public BreathingDetection bDetection;
 
 	public Text loudnessText;
-
-	public FFTAnalysis fftAnalysis;
-
 
 	//Spremenljivke za vizualizacijo
 	public GameObject stateChangeIndicator;
@@ -66,13 +63,6 @@ public class TestGraphMovement : MonoBehaviour {
 				}
 				break;
 
-			case (GraphType.FFTSum):
-			this.transform.position = new Vector3 (this.transform.position.x + xSpeed * Time.deltaTime, minY + (maxY - minY) * getFFTSum(), this.transform.position.z);
-			
-			if (this.transform.position.x >= maxX) {
-				this.transform.position = new Vector3(minX, this.transform.position.y, this.transform.position.z);
-			}
-			break;
 
 			case (GraphType.TrueLoudness):
 			this.transform.position = new Vector3 (this.transform.position.x + xSpeed * Time.deltaTime, minY + (maxY - minY) * micControl.loudness, this.transform.position.z);
@@ -91,16 +81,11 @@ public class TestGraphMovement : MonoBehaviour {
 			break;
 
 			default:
-				Debug.Log ("This shouldn't happen");
+				Debug.Log ("This shouldn't happen" + gType.ToString());
 				break;
 		}
 
 
-	}
-
-
-	float getFFTSum(){
-		return fftAnalysis.GetFFTSum ()*3f;
 	}
 
 	float getVariance(){
