@@ -35,9 +35,10 @@ public class BreathingDetection : MonoBehaviour {
 	public float pitchFrequencyThresholdHigh = 2000;
 
 
-	//test variables
+	//Loudness minimization variables
 	private List<float> loudnessList = new List<float>();
-	private int maxListCount = 10;
+	private int maxLoudnessListCount = 10;
+	[HideInInspector]
 	public float minimizedLoudness = 999f;
 
 
@@ -140,7 +141,7 @@ public class BreathingDetection : MonoBehaviour {
 		}
 
 		//Remove oldest loudness from list and recalculate minimizedLoudness (only if the oldest loudness is the currentMinimizedLoudness)
-		if (loudnessList.Count >= maxListCount) {
+		if (loudnessList.Count >= maxLoudnessListCount) {
 			if (loudnessList[0] <= minimizedLoudness){
 				//Find new minimizedLoudness
 				float min = loudnessList[1];

@@ -12,12 +12,12 @@ public class MicrophoneController : MonoBehaviour {
 	public int samples = 1024;
 	private int maxFrequency = 44100;
 	private int minFrequency = 0;
-	public bool mute = true; //delete and implement audio mixer
+	public bool mute = true;
+	[HideInInspector]
 	public float loudness;
 	private float loudnessMultiplier = 10.0f; //Multiply loudness with this number
 
 	private float[] fftSpectrum;
-	public bool useFFT = false;
 
 	private bool isMicrophoneReady = false;
 	private AudioMixer aMixer;
@@ -65,9 +65,6 @@ public class MicrophoneController : MonoBehaviour {
 		if (isMicrophoneReady) {
 			loudness = calculateLoudness();
 			calculatePitch();
-			if (useFFT){
-				calculateSpectrumData();
-			}
 		}
 	}
 
@@ -160,13 +157,5 @@ public class MicrophoneController : MonoBehaviour {
 		}
 
 		return Mathf.Sqrt(sum/samples)*loudnessMultiplier;
-	}
-
-	void calculateSpectrumData(){
-		float[] spectrum = new float[samples];
-		aSource.GetSpectrumData(spectrum, 0, FFTWindow.Hamming);
-		fftSpectrum = spectrum;
-
-		SendMessage ("analyzeSpectrumData", fftSpectrum);
 	}
 }
