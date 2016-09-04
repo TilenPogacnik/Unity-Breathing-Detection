@@ -7,8 +7,6 @@ using System.Collections.Generic;
 public class BreathingDetection : MonoBehaviour {
 
 	public Text stateText;
-	public Text varianceText;
-
 
 	enum Breathing{Inhale, Exhale}; //Two possible breathing states 
 	private Breathing currentState = Breathing.Inhale; 
@@ -17,18 +15,19 @@ public class BreathingDetection : MonoBehaviour {
 
 	private float prevLoudness = 0f; //loudness in previous frame
 	private float variance = 0f; //variance of current frame
-	private float loudnessMultiplier = 10.0f; //We multiply the loudness so the numbers are more natural
 	private int varianceUnderThresholdCounter = 0; //counts how many frames the variance spent under threshold
-
-	private bool fastExhalePossible = false;
 
 	[Header("Hysteresis variables")]
 	public float exhaleLoudnessThresholdHigh = 0.5f; //determines how loud the exhale needs to be to change state to Exhale
+	[HideInInspector]
 	public float exhaleLoudnessThresholdLow = 0.2f;  ///determines how loud the exhale needs to be to change state to Exhale
 	public float inhaleLoudnessThresholdHigh = 0.1f; //determines how silent should the exhale be to change state to Inhale
+	[HideInInspector]
 	public float inhaleLoudnessThresholdLow = 0.05f; //determines how silent should the exhale be to change state to Inhale
 	
+	[HideInInspector]
 	public float exhaleVarianceThreshold = 2; //determines how large should the variance be to change state to Exhale
+	[HideInInspector]
 	public float inhaleVarianceThreshold = -3; //determines how silent should the variance be to change state to Inhale
 
 	public float pitchFrequencyThresholdLow = 1000;	//if sound pitch is between these values it could be an exhale
@@ -41,6 +40,8 @@ public class BreathingDetection : MonoBehaviour {
 	[HideInInspector]
 	public float minimizedLoudness = 999f;
 
+	[SerializeField] private bool useMinimizedLoudness = true;
+
 
 	void Start () {
 		micControl = this.GetComponent<MicrophoneController> ();
@@ -49,11 +50,11 @@ public class BreathingDetection : MonoBehaviour {
 		}
 	}
 	
-	void Update () {
+	void FixedUpdate () {
 		updateVariance ();
 
 		minimizeLoudness ();
-
+//		Debug.Log (minimizedLoudness);
 		switch (currentState) {
 			
 			case (Breathing.Inhale):
@@ -68,8 +69,9 @@ public class BreathingDetection : MonoBehaviour {
 				Debug.Log ("This should never happen.");
 				break;
 		}
-		stateText.text = "Current state: " + currentState.ToString();
-
+		if (stateText != null) {
+			stateText.text = "Current state: " + currentState.ToString ();
+		}
 	}
 
 	/*
@@ -87,8 +89,6 @@ public class BreathingDetection : MonoBehaviour {
 		if (currentState == Breathing.Inhale) {
 			if (minimizedLoudness > exhaleLoudnessThresholdLow
 			    &&(micControl.getPitch() > pitchFrequencyThresholdLow && micControl.getPitch() < pitchFrequencyThresholdHigh)) {
-				fastExhalePossible = true;
-
 				currentState = Breathing.Exhale; //Change state to exhaling
 				BreathingEvents.TriggerOnExhale (); //Trigger onExhale event
 			}
@@ -123,7 +123,7 @@ public class BreathingDetection : MonoBehaviour {
 	void updateVariance(){
 		variance = micControl.loudness - prevLoudness;
 		prevLoudness = micControl.loudness;
-
+		
 		//update variance counter
 		if (variance < exhaleVarianceThreshold) {
 			varianceUnderThresholdCounter++;
@@ -131,29 +131,37 @@ public class BreathingDetection : MonoBehaviour {
 		} else {
 			varianceUnderThresholdCounter = 0;
 		}
+
 	}
 
 	void minimizeLoudness(){
-		loudnessList.Add (prevLoudness);
 
-		if (prevLoudness <= minimizedLoudness) {
-			minimizedLoudness = prevLoudness;
-		}
+		if (useMinimizedLoudness) {
+			loudnessList.Add (prevLoudness);
 
-		//Remove oldest loudness from list and recalculate minimizedLoudness (only if the oldest loudness is the currentMinimizedLoudness)
-		if (loudnessList.Count >= maxLoudnessListCount) {
-			if (loudnessList[0] <= minimizedLoudness){
-				//Find new minimizedLoudness
-				float min = loudnessList[1];
-				for(int i = 1; i < loudnessList.Count; i++){
-					if (loudnessList[i] < min){
-						min =loudnessList[i];
-					}
-				}
-				minimizedLoudness = min;
-
+			if (prevLoudness <= minimizedLoudness) {
+				minimizedLoudness = prevLoudness;
 			}
-			loudnessList.RemoveAt(0);
+
+			//Remove oldest loudness from list and recalculate minimizedLoudness (only if the oldest loudness is the currentMinimizedLoudness)
+			if (loudnessList.Count >= maxLoudnessListCount) {
+				if (loudnessList [0] <= minimizedLoudness) {
+					//Find new minimizedLoudness
+					float min = loudnessList [1];
+					for (int i = 1; i < loudnessList.Count; i++) {
+						if (loudnessList [i] < min) {
+							min = loudnessList [i];
+						}
+					}
+					minimizedLoudness = min;
+
+				}
+				loudnessList.RemoveAt (0);
+
+			} 
+		}else {
+				minimizedLoudness = micControl.loudness;
+				//Debug.Log(minimizedLoudness);
 
 		} 
 

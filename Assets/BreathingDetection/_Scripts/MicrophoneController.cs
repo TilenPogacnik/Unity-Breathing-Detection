@@ -15,7 +15,7 @@ public class MicrophoneController : MonoBehaviour {
 	public bool mute = true;
 	[HideInInspector]
 	public float loudness;
-	private float loudnessMultiplier = 10.0f; //Multiply loudness with this number
+	[SerializeField] private float loudnessMultiplier = 10.0f; //Multiply loudness with this number
 
 	private float[] fftSpectrum;
 
@@ -25,8 +25,17 @@ public class MicrophoneController : MonoBehaviour {
 	public float highPassCutoff; //Ignores all frequencies above this value
 	private float pitchValue;
 	private List<float> pastPitches;
+	[HideInInspector]
 	public int pitchRecordTime = 5;
 	private float averagePitch;
+
+	private bool UseFFTCentroid;
+	private float centroidValue;
+
+	private bool EnableSavingOfRecordedAudio;
+
+	private float maxPitch = 0.0f; //Delete this, its just for testing
+
 
 	IEnumerator Start () {
 		aSource = this.GetComponent<AudioSource> ();
@@ -61,30 +70,43 @@ public class MicrophoneController : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
+	void FixedUpdate () {
 		if (isMicrophoneReady) {
 			loudness = calculateLoudness();
-			calculatePitch();
+
+			if (UseFFTCentroid) {
+				calculateFFTCentroid();
+
+			} else {
+				calculatePitch();
+			}
+		}
+	}
+
+	void OnGUI(){
+		if (EnableSavingOfRecordedAudio) {
+			if (GUI.Button (new Rect (10, 10, 50, 50), "Save")) {
+				SaveRecordedAudio ();
+			}
 		}
 	}
 
 	void prepareMicrophone(){
-		//Debug.Log ("Output sample rate: " + AudioSettings.outputSampleRate);
-		if (Microphone.devices.Length > 0){
-			Microphone.GetDeviceCaps(Microphone.devices[0], out minFrequency, out maxFrequency);//Gets the maxFrequency and minFrequency of the device
-			if (maxFrequency == 0){//These 2 lines of code are mainly for windows computers
+		if (Microphone.devices.Length > 0) {
+			//Gets the maxFrequency and minFrequency of the device
+			Microphone.GetDeviceCaps (Microphone.devices [0], out minFrequency, out maxFrequency);
+			if (maxFrequency == 0) {//These 2 lines of code are mainly for windows computers
 				maxFrequency = 44100;
 			}
-			aSource.clip = Microphone.Start(Microphone.devices[0], true, 1, AudioSettings.outputSampleRate);
-			aSource.loop = true;
+			if (aSource.clip == null){
+				aSource.clip = Microphone.Start (Microphone.devices [0], true, 1, maxFrequency);			
+				aSource.loop = true;
 
-			//Wait until microphone starts
-			while (!(Microphone.GetPosition(Microphone.devices[0]) > 0)){
-
+				//Wait until microphone starts recording
+				while (!(Microphone.GetPosition(Microphone.devices[0]) > 0)) {
+				}
 			}
-
 			aSource.Play();
-
 			isMicrophoneReady = true;
 
 		} else {
@@ -113,8 +135,36 @@ public class MicrophoneController : MonoBehaviour {
 		// Convert index to frequency
 		pitchValue = HighPassFilter(freqN * 24000 / samples, highPassCutoff);
 		updatePastPitches (pitchValue);
-		//if (pitchValue > 100)	Debug.Log (pitchValue);
+
+		if (pitchValue > maxPitch){
+			maxPitch = pitchValue;
+			//Debug.Log ("MaxPitch: " + maxPitch);
+
+		}
+	/*	if (pitchValue > 750 && pitchValue < 3000) {
+			Debug.Log ("Pitch could be exhale");
+		}*/
 	}
+
+	void calculateFFTCentroid(){
+		aSource.GetSpectrumData (fftSpectrum, 0, FFTWindow.BlackmanHarris);
+
+		float centroid = 0.0f;
+		float fftSum = 0.0f;
+		float weightedSum = 0.0f;
+
+		for (int i = 0; i < fftSpectrum.Length/2; i++) {
+			fftSum += fftSpectrum [i];
+			weightedSum += fftSpectrum [i] * i * 24000/samples;
+		}
+
+		pitchValue =/*(24000 / samples) * */(weightedSum / fftSum);
+		updatePastPitches (pitchValue);
+
+		Debug.Log ("Centroid: " + pitchValue);
+	}
+
+
 
 	float HighPassFilter(float pitch, float cutOff){
 		if (pitch > cutOff) {
@@ -147,6 +197,10 @@ public class MicrophoneController : MonoBehaviour {
 		return averagePitch;
 	}
 
+	public float getCentroid(){
+		return centroidValue;
+	}
+
 	float calculateLoudness(){
 		float[] microphoneData = new float[samples];
 		float sum = 0;
@@ -157,5 +211,9 @@ public class MicrophoneController : MonoBehaviour {
 		}
 
 		return Mathf.Sqrt(sum/samples)*loudnessMultiplier;
+	}
+
+	void SaveRecordedAudio(){
+		//EditorUtility.ExtractOggFile (GameObject.Find("TestAudioSource").GetComponent<AudioSource>().clip, Application.streamingAssetsPath);
 	}
 }
